@@ -27,7 +27,7 @@ public:
     // 构造函数
     Grid16(uint64_t initialValue = 0) : data(initialValue) {}
 // get & set
-    uint64_t getCell(uint8_t index) const {
+    uint8_t getCell(uint8_t index) const {
         return (data >> (index << 2)) & 0xF;
     }
     void setCell(uint8_t index, uint8_t value) {
@@ -52,7 +52,8 @@ public:
         data = value;
     }
 //  gen
-    uint64_t* genStatus(uint64_t* buffer);  //  返回end
+    inline void swapCell(uint8_t id,uint8_t zi,Grid16& s,uint64_t* p);
+    uint64_t* Grid16::genStatus(uint64_t* buffer);  //  返回end
 
 };
 
@@ -117,7 +118,10 @@ int main(){
 
     //  比较符
     GreaterStatus comp;
-    std::push_heap(openQueue.begin(),openQueue.end(),comp);
+    while(openQueue.size()){
+        
+        std::push_heap(openQueue.begin(),openQueue.end(),comp);
+    }
 
     return 0;
 }
@@ -137,15 +141,46 @@ uint8_t Grid16::calDis(uint8_t index,uint8_t value){
     return retv;
 }
 
+void Grid16::swapCell(uint8_t id,uint8_t zi,Grid16& s,uint64_t* p){
+    if (id <= 15 && this->getCell(id)){   //  没有越界并且不为0
+            s.setCell(zi,getCell(id));  //  交换两个方格
+            s.setCell(id,0);
+            *p++ = s.getRawValue();
+        }
+}
+
 uint64_t* Grid16::genStatus(uint64_t* buffer){
     //  找到0的位置
     uint8_t zeros[16];
     uint8_t zeroCount = 0;
-    uint8_t index;
-    for (index=0;index<16;++index)  //  找到所有的0
-        if (!getCell(index))
-            zeros[zeroCount++] = index;
-    
+    uint8_t id,i,zi;
+    uint64_t *p = buffer;
+    if (p == nullptr)
+        return nullptr;
+
+    Grid16 s;
+    for (id=0;id<16;++id)  //  找到所有的0
+        if (!this->getCell(id))
+            zeros[zeroCount++] = id;
+    for (i=0;i<zeroCount;++i){
+        zi = zeros[i];
+
+        s.data = this->data;
+        id = zi-1;  //  左
+        if ((id>>2) == (zi>>2)) //  同一行
+            swapCell(id,zi,s,p);
+        s.data = this->data;
+        id = zi+1;  //  右
+        if ((id>>2) == (zi>>2))
+            swapCell(id,zi,s,p);
+        s.data = this->data;
+        id = zi-4;  //  上
+        swapCell(id,zi,s,p);
+        s.data = this->data;
+        id = zi+4;  //  下
+        swapCell(id,zi,s,p);
+    }
+    return p;
 }
 
 bool argParser(){
